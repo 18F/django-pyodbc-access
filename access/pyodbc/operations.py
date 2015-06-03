@@ -1,8 +1,10 @@
+from __future__ import absolute_import
 from django.db.backends import BaseDatabaseOperations
 from access.pyodbc import query
 import datetime
 import time
 import decimal
+import six
 
 class DatabaseOperations(BaseDatabaseOperations):
     compiler_module = "access.pyodbc.compiler"
@@ -276,7 +278,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         if value is None:
             return None
         # SQL Server doesn't support microseconds
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             return datetime.datetime(*(time.strptime(value, '%H:%M:%S')[:6]))
         return datetime.datetime(1900, 1, 1, value.hour, value.minute, value.second)
 

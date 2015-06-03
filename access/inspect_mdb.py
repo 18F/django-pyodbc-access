@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 from django.conf import settings
 import os, sys
 import django.db
@@ -6,7 +8,7 @@ from cStringIO import StringIO
 import contextlib
 import logging
 
-from temp_db import temp_db
+from .temp_db import temp_db
 
 @contextlib.contextmanager
 def temp_mdb(filename, usingname='_temp_mdb'):
@@ -25,4 +27,4 @@ def inspect_mdb(filename):
 
 if __name__ == '__main__':
     #NOTE: This fails if DJANGO_SETTINGS_MODULE is not set for obvious reasons.
-    print inspect_mdb(os.argv[1])
+    print(inspect_mdb(os.argv[1]))

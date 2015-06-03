@@ -1,11 +1,13 @@
 """
 MS SQL Server database backend for Django.
 """
+import six
+from six.moves import map
 #Django 1.4 required
 
 try:
     import pyodbc as Database
-except ImportError, e:
+except ImportError as e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
 
@@ -105,7 +107,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         
     def _fixup_settings_dict(self, sd):
         new_d = {}
-        for k, v in sd.iteritems():
+        for k, v in six.iteritems(sd):
             if k.startswith('DATABASE_'):
                 k = k.partition('_')[2]
             new_d[k] = v
@@ -155,7 +157,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             NAME='name',
             OPTIONS='options',
         )
-        for k, v in rename.iteritems():
+        for k, v in six.iteritems(rename):
             settings[v] = settings[k]
             del settings[k]
         return settings
@@ -209,7 +211,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return z
         
     def _open_new_connection(self):
-        connstr = ';'.join(('%s=%s'%(k, v) for k, v in self._get_connstring_data().iteritems()))
+        connstr = ';'.join(('%s=%s'%(k, v) for k, v in six.iteritems(self._get_connstring_data())))
         kwargs = self._get_new_connection_kwargs()
         conn = Database.connect(connstr, **kwargs)
         self._on_connection_created(conn)
@@ -263,7 +265,7 @@ class CursorWrapper(object):
         self.last_params = ()
 
     def format_sql(self, sql, n_params=None):
-        if self.driver_needs_utf8 and isinstance(sql, unicode):
+        if self.driver_needs_utf8 and isinstance(sql, six.text_type):
             # FreeTDS (and other ODBC drivers?) doesn't support Unicode
             # yet, so we need to encode the SQL clause itself in utf-8
             sql = sql.encode('utf-8')
@@ -278,7 +280,7 @@ class CursorWrapper(object):
     def format_params(self, params):
         fp = []
         for p in params:
-            if isinstance(p, unicode):
+            if isinstance(p, six.text_type):
                 if self.driver_needs_utf8:
                     # FreeTDS (and other ODBC drivers?) doesn't support Unicode
                     # yet, so we need to encode parameters in utf-8
@@ -296,7 +298,7 @@ class CursorWrapper(object):
                     fp.append(-1)
                 else:
                     fp.append(0)
-            elif type(p) == type(1L):
+            elif type(p) == type(1):
                 fp.append(int(p))
             else:
                 fp.append(p)

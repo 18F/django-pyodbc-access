@@ -4,6 +4,8 @@ Derives from: django.db.models.sql.query.Query
 """
 
 from datetime import datetime
+import six
+from six.moves import map
 
 REV_ODIR = {
     'ASC': 'DESC',
@@ -130,7 +132,7 @@ def query_class(QueryClass):
             return value
 
         def resolve_columns(self, row, fields=()):
-            index_start = len(self.extra_select.keys())
+            index_start = len(list(self.extra_select.keys()))
             values = [self.convert_values(v, None) for v in row[:index_start]]
             for value, field in map(None, row[index_start:], fields):
                 values.append(self.convert_values(value, field))
@@ -148,7 +150,7 @@ def query_class(QueryClass):
             self.default_reverse_ordering = False
             self._ord = []
             cnt = 0
-            extra_select_aliases = [k.strip('[]') for k in self.extra_select.keys()]
+            extra_select_aliases = [k.strip('[]') for k in list(self.extra_select.keys())]
             for ord_spec_item in ordering:
                 if ord_spec_item.endswith(' ASC') or ord_spec_item.endswith(' DESC'):
                     parts = ord_spec_item.split()
@@ -237,7 +239,7 @@ def query_class(QueryClass):
             where, w_params = self.where.as_sql(qn=qn)
             having, h_params = self.having.as_sql(qn=qn)
             params = []
-            for val in self.extra_select.itervalues():
+            for val in six.itervalues(self.extra_select):
                 params.extend(val[1])
 
             result = ['SELECT']
