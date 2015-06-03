@@ -1,5 +1,8 @@
-from django.db.backends import BaseDatabaseIntrospection
-import pyodbc as Database
+try:
+    from django.db.backends import BaseDatabaseIntrospection
+except ImportError:
+    from django.db.backends.base.introspection import BaseDatabaseIntrospection
+import pypyodbc as Database
 import logging
 log = logging.getLogger(__name__)
 
@@ -74,7 +77,7 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
         columns = [[c[3], c[4], None, c[6], c[6], c[8], c[10]] for c in cursor.columns(table=table_name)]
         items = []
         for column in columns:
-            if identity_check and False: 
+            if identity_check and False:
             #I commented the below from the and clause above, because my database has no
 			# auto_increment fields (I did not design this piece of junk), so I just said false.
             #self._is_auto_field(cursor, table_name, column[0]):
@@ -165,7 +168,7 @@ WHERE a.TABLE_NAME = %s AND a.CONSTRAINT_TYPE = 'FOREIGN KEY'"""
         for row in cursor.statistics(table=table_name):
 		    # then make a dictionary keyed from the indexed columns' names.
             if not row[5]==None:
-                indexes.update({row[8]: {"primary_key": row[5]=="PrimaryKey" and True, "unique": not row[3], "db_index": row[3] and True or False}}) 
+                indexes.update({row[8]: {"primary_key": row[5]=="PrimaryKey" and True, "unique": not row[3], "db_index": row[3] and True or False}})
 		# next, if trying to access the dictionary by field name throws an error,
         for field_name in field_names:
             try:

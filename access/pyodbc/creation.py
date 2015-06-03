@@ -1,6 +1,9 @@
-from django.db.backends.creation import BaseDatabaseCreation
+try:
+    from django.db.backends.creation import BaseDatabaseCreation
+except ImportError:
+    from django.db.backends.base.creation import BaseDatabaseCreation
+
 import base64
-from django.utils.hashcompat import md5_constructor
 import random
 
 class DataTypesWrapper(dict):
@@ -9,7 +12,7 @@ class DataTypesWrapper(dict):
             # The check name must be unique for the database. Add a random
             # component so the regresion tests don't complain about duplicate names
             #fldtype = {'PositiveIntegerField': 'int', 'PositiveSmallIntegerField': 'smallint'}[item]
-            #rnd_hash = md5_constructor(str(random.random())).hexdigest()
+            #rnd_hash = hashlib.md5(str(random.random()).encode('ascii')).hexdigest()
             #unique = base64.b64encode(rnd_hash, '__')[:6]
             #return '%(fldtype)s CONSTRAINT [CK_%(fldtype)s_pos_%(unique)s_%%(column)s] CHECK ([%%(column)s] >= 0)' % locals()
         return super(DataTypesWrapper, self).__getitem__(item)

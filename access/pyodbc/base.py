@@ -6,7 +6,7 @@ from six.moves import map
 #Django 1.4 required
 
 try:
-    import pyodbc as Database
+    import pypyodbc as Database
 except ImportError as e:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("Error loading pyodbc module: %s" % e)
@@ -15,15 +15,16 @@ import re
 m = re.match(r'(\d+)\.(\d+)\.(\d+)(?:-beta(\d+))?', Database.version)
 vlist = list(m.groups())
 if vlist[3] is None: vlist[3] = '9999'
-pyodbc_ver = tuple(map(int, vlist))
-if pyodbc_ver < (2, 0, 38, 9999):
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured("pyodbc 2.0.38 or newer is required; you have %s" % Database.version)
 
-from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
+try:
+    from django.db.backends import BaseDatabaseWrapper, BaseDatabaseFeatures, BaseDatabaseValidation
+except ImportError:  # these imports have moved in later Django version
+    from django.db.backends.base.base import BaseDatabaseWrapper
+    from django.db.backends.base.features import BaseDatabaseFeatures
+    from django.db.backends.base.validation import BaseDatabaseValidation
 from django.db.backends.signals import connection_created
 from django.conf import settings
-    
+
 from access.pyodbc.operations import DatabaseOperations
 from access.pyodbc.client import DatabaseClient
 from access.pyodbc.creation import DatabaseCreation
@@ -38,6 +39,7 @@ DRIVER_ACCESS = 'Microsoft Access Driver (*.mdb)'
 DRIVER_FREETDS = 'FreeTDS'
 DRIVER_SQL_SERVER = 'SQL Server'
 DRIVER_SQL_NATIVE_CLIENT = 'SQL Native Client'
+DRIVER_MDBTOOLS = 'MDBTools'
 
 class DatabaseFeatures(BaseDatabaseFeatures):
     uses_custom_query_class = True
@@ -85,16 +87,16 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def __init__(self, *args, **kwargs):
         super(DatabaseWrapper, self).__init__(*args, **kwargs)
-        
+
         self._set_configuration(self.settings_dict)
-        
+
         self.features = DatabaseFeatures(self)
         self.ops = DatabaseOperations(self)
         self.client = DatabaseClient(self)
         self.creation = DatabaseCreation(self)
         self.introspection = DatabaseIntrospection(self)
         self.validation = BaseDatabaseValidation(self)
-        
+
         self.connection = None
 
     def _set_configuration(self, settings_dict):
@@ -104,7 +106,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             raise ImproperlyConfigured('You need to specify NAME in your Django settings file.')
         self._setup_operators(sd)
         self.settings_dict = sd
-        
+
     def _fixup_settings_dict(self, sd):
         new_d = {}
         for k, v in six.iteritems(sd):
@@ -112,13 +114,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 k = k.partition('_')[2]
             new_d[k] = v
         return new_d
-        
+
     def _parse_driver(self, driver):
         shortcuts = {
             None: self._guess_driver(),
             'access': DRIVER_ACCESS,
             'sql': DRIVER_SQL_SERVER,
             'freetds': DRIVER_FREETDS,
+            'mdbtools': DRIVER_MDBTOOLS,
         }
         return shortcuts.get(driver, driver)
 
@@ -165,7 +168,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def _get_connstring_data(self):
         sd = self.settings_dict
         cd = dict()
-            
+
         if sd['options']['dsn']:
             cd['DSN'] = sd['options']['dsn']
         else:
@@ -196,7 +199,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
         if sd['options']['MARS_Connection']:
             cd['MARS_Connection']='yes'
-            
+
         if sd['options']['extra_params']:
             cd.update(sd['options']['extra_params'])
 
@@ -209,14 +212,14 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         if self.settings_dict['options']['unicode_results']:
             z['unicode_results'] = True
         return z
-        
+
     def _open_new_connection(self):
         connstr = ';'.join(('%s=%s'%(k, v) for k, v in six.iteritems(self._get_connstring_data())))
         kwargs = self._get_new_connection_kwargs()
         conn = Database.connect(connstr, **kwargs)
         self._on_connection_created(conn)
         return conn
-        
+
     def _on_connection_created(self, conn):
         return
         # Set date format for the connection. Also, make sure Sunday is
@@ -244,7 +247,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # to avoid this
         #if self.drv_name.startswith('LIBTDSODBC') and not self.connection.autocommit:
             #self.connection.commit()
-                
+
     def _cursor(self):
         if self.connection is None:
             self.connection = self._open_new_connection()
@@ -355,6 +358,6 @@ class CursorWrapper(object):
         if attr in self.__dict__:
             return self.__dict__[attr]
         return getattr(self.cursor, attr)
-    
+
     def __iter__(self):
         return iter(self.cursor)

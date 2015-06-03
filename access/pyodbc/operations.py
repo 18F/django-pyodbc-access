@@ -1,5 +1,9 @@
 from __future__ import absolute_import
-from django.db.backends import BaseDatabaseOperations
+try:
+    from django.db.backends import BaseDatabaseOperations
+except ImportError:
+    from django.db.backends.base.operations import BaseDatabaseOperations
+
 from access.pyodbc import query
 import datetime
 import time
